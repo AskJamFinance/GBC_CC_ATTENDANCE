@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Sunday Attendance</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#F0F4FF;--surface:#fff;--primary:#3B5BDB;--primary-l:#EDF2FF;--primary-d:#2845B8;
+  --accent:#F76707;--green:#2F9E44;--green-l:#EBFBEE;
+  --text:#1C2233;--sub:#6B7394;--border:#DEE2EF;
+  --shadow:0 2px 12px rgba(59,91,219,.10);--r:14px;--rs:8px;
+  --c-xw:#9C36B5;--c-xw-l:#F9F0FF;
+  --c-j1:#E67700; --c-j1-l:#FFF4E6;
+  --c-to:#2F9E44; --c-to-l:#EBFBEE;
+  --c-gl:#F76707; --c-gl-l:#FFF4ED;
+  --c-li:#E03131; --c-li-l:#FFF5F5;
+  --c-lb:#1098AD; --c-lb-l:#E3FAFC;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{height:100%}
+body{font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+
+/* ── HEADER ── */
+header{background:var(--primary);color:#fff;padding:max(env(safe-area-inset-top),16px) 18px 12px;display:flex;align-items:center;gap:10px}
+header .hi{font-size:24px}
+header .ht{flex:1}
+header h1{font-size:1.1rem;font-weight:800}
+header p{font-size:.7rem;opacity:.78;margin-top:1px}
+.exp-float-btn{display:none;background:rgba(255,255,255,.18);color:#fff;border:1.5px solid rgba(255,255,255,.45);border-radius:20px;padding:6px 12px;font-size:.75rem;font-weight:700;cursor:pointer}
+
+/* ── PROGRESS ── */
+.progress{display:flex;gap:5px;padding:10px 18px 0;background:var(--primary)}
+.ps{height:3px;flex:1;border-radius:2px;background:rgba(255,255,255,.25);transition:background .3s}
+.ps.on{background:#fff}
+
+/* ── STEPS ── */
+.step{display:none}.step.active{display:block}
+.wrap{max-width:580px;margin:0 auto;padding:16px 14px 100px}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);padding:18px;margin-bottom:12px}
+.card-lbl{font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);margin-bottom:10px}
+
+/* ── CONFIG ── */
+.cfg-box{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);padding:20px;margin-bottom:12px}
+.cfg-box h2{font-size:.95rem;font-weight:800;margin-bottom:6px}
+.cfg-box p{font-size:.8rem;color:var(--sub);margin-bottom:12px;line-height:1.55}
+.cfg-input{width:100%;border:2px solid var(--border);border-radius:var(--rs);padding:13px;font-size:.88rem;outline:none;transition:border .15s;margin-bottom:8px}
+.cfg-input:focus{border-color:var(--primary)}
+.cfg-status{font-size:.78rem;padding:10px 14px;border-radius:var(--rs);margin-bottom:8px;display:none;white-space:pre-line;line-height:1.5}
+.cfg-status.ok{background:var(--green-l);color:var(--green)}
+.cfg-status.err{background:#FFF5F5;color:var(--c-li)}
+.cfg-status.loading{background:var(--primary-l);color:var(--primary)}
+.cfg-info{background:var(--primary-l);border-radius:var(--rs);padding:14px;font-size:.76rem;color:var(--primary);line-height:1.7}
+
+/* ── CALENDAR ── */
+.cal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cal-hdr span{font-weight:800;font-size:.95rem}
+.cal-nav{background:var(--primary-l);border:none;border-radius:7px;width:38px;height:38px;cursor:pointer;font-size:1.2rem;color:var(--primary);display:flex;align-items:center;justify-content:center}
+.cal-nav:active{background:var(--primary);color:#fff}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cal-grid .dow{font-size:.62rem;font-weight:700;color:var(--sub);padding:3px 0 6px}
+.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:.85rem;cursor:default;border:2px solid transparent;transition:all .15s}
+.cal-day.sun{cursor:pointer;font-weight:700;color:var(--primary);background:var(--primary-l)}
+.cal-day.sun:active{background:var(--primary);color:#fff}
+.cal-day.sel{background:var(--primary)!important;color:#fff!important;border-color:var(--primary-d)}
+.cal-day.dim{color:#ccc}
+.cal-day.today{border-color:var(--accent)}
+.date-ok{margin-top:10px;padding:10px 13px;background:var(--green-l);border-radius:var(--rs);font-weight:600;color:var(--green);display:none;font-size:.85rem}
+
+/* ── BUTTONS ── */
+.btn{background:var(--primary);color:#fff;border:none;border-radius:var(--rs);padding:15px;font-size:.95rem;font-weight:700;cursor:pointer;width:100%;margin-top:8px;min-height:52px;transition:background .15s}
+.btn:hover{background:var(--primary-d)}
+.btn:disabled{background:#c0c8e8;cursor:not-allowed}
+.btn-orange{background:var(--accent)}
+.btn-orange:hover{opacity:.88}
+.btn-green{background:var(--green)}
+.btn-green:hover{opacity:.88}
+.btn-outline{background:var(--surface);color:var(--primary);border:2px solid var(--primary)}
+.btn-outline:hover{background:var(--primary-l)}
+.back-btn{display:inline-flex;align-items:center;gap:5px;color:var(--primary);background:none;border:none;font-size:.88rem;font-weight:600;cursor:pointer;margin-bottom:12px;padding:4px 0}
+
+/* ── GROUPS ── */
+.group-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gc{border:2.5px solid var(--border);border-radius:var(--r);padding:18px 12px;text-align:center;cursor:pointer;transition:all .15s;background:var(--surface);min-height:82px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.gc .gn{font-size:1.4rem;font-weight:800;line-height:1}
+.gc .gl{font-size:.72rem;color:var(--sub);margin-top:4px}
+.gc[data-g="信望爱"] .gn{color:var(--c-xw)} .gc[data-g="信望爱"]:active,.gc[data-g="信望爱"].sel{border-color:var(--c-xw);background:var(--c-xw-l)}
+.gc[data-g="加1"] .gn{color:var(--c-j1)}    .gc[data-g="加1"]:active,.gc[data-g="加1"].sel{border-color:var(--c-j1);background:var(--c-j1-l)}
+.gc[data-g="TOAST"] .gn{color:var(--c-to)}  .gc[data-g="TOAST"]:active,.gc[data-g="TOAST"].sel{border-color:var(--c-to);background:var(--c-to-l)}
+.gc[data-g="GLOW"] .gn{color:var(--c-gl)}   .gc[data-g="GLOW"]:active,.gc[data-g="GLOW"].sel{border-color:var(--c-gl);background:var(--c-gl-l)}
+.gc[data-g="LIT"] .gn{color:var(--c-li)}    .gc[data-g="LIT"]:active,.gc[data-g="LIT"].sel{border-color:var(--c-li);background:var(--c-li-l)}
+.gc[data-g="来宾"] .gn{color:var(--c-lb);font-size:1.1rem} .gc[data-g="来宾"]:active,.gc[data-g="来宾"].sel{border-color:var(--c-lb);background:var(--c-lb-l)}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);padding:11px 14px;margin-bottom:11px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.badge{border-radius:20px;padding:4px 12px;font-size:.76rem;font-weight:700}
+.b-xw{background:var(--c-xw-l);color:var(--c-xw)} .b-j1{background:var(--c-j1-l);color:var(--c-j1)}
+.b-to{background:var(--c-to-l);color:var(--c-to)} .b-gl{background:var(--c-gl-l);color:var(--c-gl)}
+.b-li{background:var(--c-li-l);color:var(--c-li)} .b-lb{background:var(--c-lb-l);color:var(--c-lb)}
+.b-date{background:var(--primary-l);color:var(--primary)}
+.sync{font-size:.7rem;color:var(--sub);margin-left:auto}
+
+/* ── SEARCH ── */
+.search-box{position:relative;margin-bottom:11px}
+.search-box input{width:100%;border:2px solid var(--border);border-radius:var(--rs);padding:13px 13px 13px 40px;font-size:.95rem;outline:none;transition:border .15s;background:var(--surface)}
+.search-box input:focus{border-color:var(--primary)}
+.search-box .si{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:.95rem;pointer-events:none}
+
+/* ── VISITOR INPUT ── */
+.nf-row{display:flex;gap:8px;margin-bottom:11px}
+.nf-row input{flex:1;border:2px solid var(--border);border-radius:var(--rs);padding:13px;font-size:.95rem;outline:none;transition:border .15s;background:var(--surface)}
+.nf-row input:focus{border-color:var(--c-lb)}
+.nf-btn{background:var(--c-lb);color:#fff;border:none;border-radius:var(--rs);padding:13px 16px;font-weight:700;font-size:.9rem;cursor:pointer}
+
+/* ── NAME LIST ── */
+.name-list{display:flex;flex-direction:column;gap:6px}
+.name-row{background:var(--surface);border-radius:var(--rs);box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;align-items:center;gap:10px;padding:14px 13px;cursor:pointer;border:2px solid transparent;transition:all .12s;min-height:64px}
+.name-row:active{border-color:var(--primary)}
+.name-row.ck{background:var(--green-l);border-color:var(--green)}
+.av{width:44px;height:44px;border-radius:50%;background:var(--primary-l);color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;flex-shrink:0}
+.name-row.ck .av{background:var(--green);color:#fff}
+.cola{min-width:28px;text-align:center;font-size:1rem;font-weight:800;color:var(--sub);flex-shrink:0}
+.name-row.ck .cola{color:var(--green)}
+.ni{flex:1;min-width:0}
+.nn{font-weight:700;font-size:1.15rem;line-height:1.3}
+.ns{font-size:.72rem;color:var(--sub)}
+.row-right{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.hist-btn{background:var(--primary-l);color:var(--primary);border:none;border-radius:6px;padding:5px 9px;font-size:.68rem;font-weight:700;cursor:pointer}
+.hist-btn:active{background:var(--primary);color:#fff}
+.chk-icon{font-size:1.4rem}
+
+/* ── STATS ── */
+.stats-bar{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);padding:13px 14px;margin-top:11px;display:flex;align-items:center;gap:12px}
+.stat{text-align:center;flex:1}
+.stat .sn{font-size:1.5rem;font-weight:800;color:var(--primary)}
+.stat .sl{font-size:.66rem;color:var(--sub);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.sdiv{width:1px;height:32px;background:var(--border)}
+.act-row{display:flex;gap:8px;margin-top:10px}
+.act-row .btn{margin-top:0}
+
+/* ── EMPTY / NO RESULTS ── */
+.empty{text-align:center;padding:28px 14px;color:var(--sub)}
+.empty .ei{font-size:2rem}
+.empty p{margin-top:8px;font-size:.85rem}
+.no-res{text-align:center;padding:16px;color:var(--sub);font-size:.85rem}
+
+/* ── EXPORT ── */
+.exp-rows{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+.exp-row{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:var(--rs);font-size:.88rem}
+.exp-row .ename{font-weight:700;flex:1}
+.exp-row .epres{font-weight:800;color:var(--green)}
+.exp-row .etot{color:var(--sub)}
+.exp-row .epct{font-size:.72rem;color:var(--sub);margin-left:3px}
+.exp-grand{background:var(--primary-l)!important}
+.exp-grand .ename{color:var(--primary)}
+.exp-grand .epres{color:var(--primary)}
+.exp-divider{text-align:center;font-size:.7rem;color:var(--sub);margin:10px 0;display:flex;align-items:center;gap:8px}
+.exp-divider::before,.exp-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── PROFILE MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border-radius:22px 22px 0 0;width:100%;max-width:580px;max-height:88vh;overflow-y:auto;padding:0 0 max(env(safe-area-inset-bottom),20px);transform:translateY(30px);transition:transform .26s}
+.overlay.open .modal{transform:translateY(0)}
+.modal-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 0}
+.modal-hdr{padding:14px 18px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.modal-av{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;color:#fff;flex-shrink:0}
+.modal-info h3{font-size:1rem;font-weight:800}
+.modal-info p{font-size:.75rem;color:var(--sub);margin-top:2px}
+.modal-stats{display:flex;padding:12px 18px;border-bottom:1px solid var(--border)}
+.mst{flex:1;text-align:center}
+.mst .mn{font-size:1.35rem;font-weight:800;color:var(--primary)}
+.mst .ml{font-size:.62rem;color:var(--sub);text-transform:uppercase;font-weight:700}
+.mst-div{width:1px;background:var(--border)}
+.modal-body{padding:14px 18px}
+.modal-sec{font-size:.62rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);margin-bottom:9px}
+.att-month{margin-bottom:14px}
+.att-mth-title{font-size:.8rem;font-weight:700;margin-bottom:6px}
+.att-chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{padding:4px 11px;border-radius:20px;font-size:.72rem;font-weight:700}
+.chip-p{background:var(--green-l);color:var(--green)}
+.chip-a{background:#F8F9FF;color:var(--sub);border:1px solid var(--border)}
+.modal-close{display:block;width:calc(100% - 36px);margin:4px 18px 0;background:var(--bg);color:var(--text);border:none;border-radius:var(--rs);padding:13px;font-size:.9rem;font-weight:600;cursor:pointer}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:max(env(safe-area-inset-bottom,22px),22px);left:50%;transform:translateX(-50%);background:#1C2233;color:#fff;padding:12px 20px;border-radius:40px;font-size:.88rem;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.25);z-index:200;opacity:0;pointer-events:none;transition:opacity .22s;white-space:nowrap}
+.toast.show{opacity:1}
+.spin{display:inline-block;width:16px;height:16px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hi">⛪</div>
+  <div class="ht">
+    <h1>Sunday Attendance</h1>
+    <p>信望爱 · 加1 · TOAST · GLOW · LIT · 来宾</p>
+  </div>
+  <button class="exp-float-btn" id="expFloatBtn" onclick="goStep(4)">📊 Export</button>
+</header>
+<div class="progress">
+  <div class="ps" id="ps1"></div>
+  <div class="ps" id="ps2"></div>
+  <div class="ps" id="ps3"></div>
+  <div class="ps" id="ps4"></div>
+</div>
+
+<!-- ═══ STEP 0 — Connect ═══ -->
+<div class="step active" id="step0">
+  <div class="wrap">
+    <div class="cfg-box">
+      <h2>⚙️ Connect to Google Sheets</h2>
+      <p>Paste your Google Apps Script Web App URL. Only needed once — saved on this device.</p>
+      <input class="cfg-input" id="scriptUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec"/>
+      <div class="cfg-status" id="cfgStatus"></div>
+      <button class="btn" type="button" onclick="saveConfig()">Test &amp; Save Connection</button>
+    </div>
+    <div class="cfg-info">
+      <strong>How to get the URL:</strong><br>
+      1. Google Sheet → Extensions → Apps Script<br>
+      2. Paste Code.gs → Save → Run <code>setupSheets()</code><br>
+      3. Deploy → New Deployment → Web App<br>
+      4. Execute as: <strong>Me</strong> · Access: <strong>Anyone</strong><br>
+      5. Copy Web App URL → paste above<br><br>
+      <strong>Adding members:</strong> Open Google Sheet → go to the group tab → type index in Col A and name in Col B from Row 3 onwards.
+    </div>
+  </div>
+</div>
+
+<!-- ═══ STEP 1 — Date ═══ -->
+<div class="step" id="step1">
+  <div class="wrap">
+    <div class="card">
+      <div class="card-lbl">Select Sunday</div>
+      <div class="cal-hdr">
+        <button class="cal-nav" id="prevM">&#8249;</button>
+        <span id="calMY"></span>
+        <button class="cal-nav" id="nextM">&#8250;</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="date-ok" id="dateOk"></div>
+    </div>
+    <div class="card">
+      <div class="card-lbl">Quick Select</div>
+      <button class="btn btn-orange" type="button" onclick="nearestSun()">⚡ Jump to Nearest Sunday</button>
+    </div>
+    <button class="btn" id="step1Next" type="button" disabled>Continue →</button>
+    <br>
+    <button class="back-btn" type="button" onclick="goStep(0)" style="margin-top:10px">⚙️ Change Connection</button>
+  </div>
+</div>
+
+<!-- ═══ STEP 2 — Group ═══ -->
+<div class="step" id="step2">
+  <div class="wrap">
+    <button class="back-btn" type="button" onclick="goStep(1)">← Back</button>
+    <div class="card">
+      <div class="card-lbl">Choose Group</div>
+      <div class="group-grid">
+        <div class="gc" data-g="信望爱" onclick="pickGroup(this)"><div class="gn">信望爱</div><div class="gl">Group 信望爱</div></div>
+        <div class="gc" data-g="加1"    onclick="pickGroup(this)"><div class="gn">加1</div><div class="gl">Group 加1</div></div>
+        <div class="gc" data-g="TOAST"  onclick="pickGroup(this)"><div class="gn">TOAST</div><div class="gl">Group TOAST</div></div>
+        <div class="gc" data-g="GLOW"   onclick="pickGroup(this)"><div class="gn">GLOW</div><div class="gl">Group GLOW</div></div>
+        <div class="gc" data-g="LIT"    onclick="pickGroup(this)"><div class="gn">LIT</div><div class="gl">Group LIT</div></div>
+        <div class="gc" data-g="来宾"   onclick="pickGroup(this)"><div class="gn">👋 来宾</div><div class="gl">Visitors</div></div>
+      </div>
+    </div>
+    <button class="btn" id="step2Next" type="button" disabled>Start Attendance →</button>
+  </div>
+</div>
+
+<!-- ═══ STEP 3 — Attendance ═══ -->
+<div class="step" id="step3">
+  <div class="wrap">
+    <button class="back-btn" type="button" onclick="goStep(2)">← Back</button>
+    <div class="topbar">
+      <span class="badge" id="grpBadge"></span>
+      <span class="badge b-date" id="dateBadge"></span>
+      <span class="sync" id="syncSt"></span>
+    </div>
+    <!-- Visitor add panel -->
+    <div id="nfPanel" style="display:none">
+      <div class="card">
+        <div class="card-lbl">Add Visitor (来宾)</div>
+        <div class="nf-row">
+          <input type="text" id="nfInput" placeholder="Enter visitor's name…" autocomplete="off"/>
+          <button class="nf-btn" type="button" onclick="nfAdd()">✓ Add</button>
+        </div>
+      </div>
+    </div>
+    <!-- Search (regular groups) -->
+    <div id="regPanel" style="display:none">
+      <div class="search-box">
+        <span class="si">🔍</span>
+        <input type="text" id="searchIn" placeholder="Search by name…" oninput="renderList()" autocomplete="off"/>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-lbl" id="listLbl">Members</div>
+      <div class="name-list" id="nameList"><div class="empty"><div class="ei">⏳</div><p>Loading…</p></div></div>
+      <div class="no-res" id="noRes" style="display:none">No matching names found.</div>
+    </div>
+    <div class="stats-bar">
+      <div class="stat"><div class="sn" id="stPres">0</div><div class="sl">Present</div></div>
+      <div class="sdiv"></div>
+      <div class="stat"><div class="sn" id="stAbs">0</div><div class="sl">Absent</div></div>
+      <div class="sdiv"></div>
+      <div class="stat"><div class="sn" id="stTot">0</div><div class="sl">Total</div></div>
+    </div>
+    <div class="act-row">
+      <button class="btn btn-outline" type="button" onclick="goStep(2)">← Back</button>
+      <button class="btn btn-green" id="saveBtn" type="button" onclick="saveToSheet()">☁️ Save to Sheet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ STEP 4 — Export ═══ -->
+<div class="step" id="step4">
+  <div class="wrap">
+    <button class="back-btn" type="button" onclick="goStep(3)">← Back</button>
+    <div class="card">
+      <div class="card-lbl">Today's Attendance — <span id="expDateLbl"></span></div>
+      <div class="exp-rows" id="expRows"></div>
+      <div class="exp-divider">download options</div>
+      <button class="btn" type="button" onclick="openSheet()">📋 Open Google Sheet</button>
+      <button class="btn btn-green" id="xlBtn" type="button" onclick="saveExcel()" style="margin-top:8px">📥 Save as Excel (.xlsx)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PROFILE MODAL ═══ -->
+<div class="overlay" id="overlay" onclick="closeOverlay(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-hdr">
+      <div class="modal-av" id="mavatar"></div>
+      <div class="modal-info">
+        <h3 id="mname"></h3>
+        <p id="mgroup"></p>
+      </div>
+    </div>
+    <div class="modal-stats">
+      <div class="mst"><div class="mn" id="mpres">—</div><div class="ml">Present</div></div>
+      <div class="mst-div"></div>
+      <div class="mst"><div class="mn" id="mtot">—</div><div class="ml">Sessions</div></div>
+      <div class="mst-div"></div>
+      <div class="mst"><div class="mn" id="mpct">—</div><div class="ml">Rate</div></div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-sec">Attendance History</div>
+      <div id="mhist"></div>
+    </div>
+    <button class="modal-close" type="button" onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── Constants ────────────────────────────────────────────────────────
+const GROUPS = ['信望爱','加1','TOAST','GLOW','LIT','来宾'];
+const GICON  = {'信望爱':'🟣','加1':'🟠','TOAST':'🍞','GLOW':'🔥','LIT':'🔴','来宾':'👋'};
+const GBADGE = {'信望爱':'b-xw','加1':'b-j1','TOAST':'b-to','GLOW':'b-gl','LIT':'b-li','来宾':'b-lb'};
+const GCOLOR = {'信望爱':'#9C36B5','加1':'#E67700','TOAST':'#2F9E44','GLOW':'#F76707','LIT':'#E03131','来宾':'#1098AD'};
+const GBGCOL = {'信望爱':'var(--c-xw-l)','加1':'var(--c-j1-l)','TOAST':'var(--c-to-l)','GLOW':'var(--c-gl-l)','LIT':'var(--c-li-l)','来宾':'var(--c-lb-l)'};
+
+// ─── State ────────────────────────────────────────────────────────────
+const S = {
+  url: localStorage.getItem('gsUrl')||'',
+  date: null, group: null,
+  members: [], allDates: [],
+  calY: 0, calM: 0
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────
+const fmtDate  = d => d.toLocaleDateString('en-SG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+const shortDt  = d => { const dd=String(d.getDate()).padStart(2,'0'),mm=String(d.getMonth()+1).padStart(2,'0'),yy=String(d.getFullYear()).slice(-2); return `${dd}-${mm}-${yy}`; };
+const clLetter = n => { let s=''; while(n>0){s=String.fromCharCode(64+((n-1)%26+1))+s;n=Math.floor((n-1)/26);} return s; };
+
+function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2500); }
+
+function goStep(n){
+  document.querySelectorAll('.step').forEach((s,i)=>s.classList.toggle('active',i===n));
+  for(let i=1;i<=4;i++) document.getElementById('ps'+i).classList.toggle('on',i<=n);
+  document.getElementById('expFloatBtn').style.display = n===2?'block':'none';
+  if(n===3) loadMembers();
+  if(n===4) renderExport();
+  window.scrollTo(0,0);
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────
+(function(){
+  if(S.url){ document.getElementById('scriptUrl').value=S.url; initCal(); goStep(1); }
+})();
+
+// ─── Config ───────────────────────────────────────────────────────────
+async function saveConfig(){
+  const url = document.getElementById('scriptUrl').value.trim();
+  const st  = document.getElementById('cfgStatus');
+  st.style.display='block';
+  if(!url){ st.className='cfg-status err'; st.textContent='⚠️ Please paste your Web App URL first.'; return; }
+  if(!url.includes('script.google.com')){
+    st.className='cfg-status err';
+    st.textContent='❌ URL looks wrong.\nMust be: https://script.google.com/macros/s/…/exec'; return;
+  }
+  st.className='cfg-status loading'; st.textContent='🔄 Testing connection…';
+  const ctrl=new AbortController();
+  const timer=setTimeout(()=>ctrl.abort(),15000);
+  try{
+    const res  = await fetch(`${url}?action=getDates`,{redirect:'follow',signal:ctrl.signal});
+    clearTimeout(timer);
+    const text = await res.text();
+    let data;
+    try{ data=JSON.parse(text); }
+    catch(pe){
+      st.className='cfg-status err';
+      st.textContent='❌ Script returned non-JSON.\n\nCheck:\n1. Code.gs is saved\n2. Deployed as Web App\n3. Access = Anyone\n4. URL ends in /exec'; return;
+    }
+    if(data.error) throw new Error(data.error);
+    S.url=url; localStorage.setItem('gsUrl',url);
+    st.className='cfg-status ok'; st.textContent='✅ Connected! Loading…';
+    setTimeout(()=>{ initCal(); goStep(1); },800);
+  }catch(e){
+    clearTimeout(timer);
+    let msg='❌ ';
+    if(e.name==='AbortError') msg+='Timed out (15s). Check internet or URL.';
+    else if(e.message&&e.message.includes('fetch')) msg+='Network error. Check internet.';
+    else msg+='Error: '+(e.message||e);
+    st.className='cfg-status err'; st.textContent=msg;
+  }
+}
+
+// ─── Calendar ─────────────────────────────────────────────────────────
+function initCal(){ const n=new Date(); S.calY=n.getFullYear(); S.calM=n.getMonth(); renderCal(); }
+function renderCal(){
+  const y=S.calY,m=S.calM;
+  const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('calMY').textContent=MN[m]+' '+y;
+  const g=document.getElementById('calGrid'); g.innerHTML='';
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d=>{ const el=document.createElement('div');el.className='cal-grid dow';el.textContent=d;g.appendChild(el); });
+  const first=new Date(y,m,1),last=new Date(y,m+1,0),today=new Date();today.setHours(0,0,0,0);
+  for(let i=0;i<first.getDay();i++){ const el=document.createElement('div');el.className='cal-day dim';el.textContent=new Date(y,m,-first.getDay()+1+i).getDate();g.appendChild(el); }
+  for(let d=1;d<=last.getDate();d++){
+    const dt=new Date(y,m,d),el=document.createElement('div');el.className='cal-day';
+    if(dt.getDay()===0){ el.classList.add('sun'); el.onclick=()=>pickDate(dt); }
+    if(S.date&&shortDt(dt)===shortDt(S.date)) el.classList.add('sel');
+    if(dt.getTime()===today.getTime()) el.classList.add('today');
+    el.textContent=d; g.appendChild(el);
+  }
+}
+function pickDate(d){
+  S.date=d; renderCal();
+  const ok=document.getElementById('dateOk');
+  ok.style.display='block'; ok.textContent='✅ '+fmtDate(d);
+  document.getElementById('step1Next').disabled=false;
+}
+function nearestSun(){
+  const t=new Date();t.setHours(0,0,0,0);
+  const day=t.getDay();
+  const diff=day===0?0:day<=3?-day:7-day;
+  const sun=new Date(t);sun.setDate(t.getDate()+diff);
+  S.calY=sun.getFullYear();S.calM=sun.getMonth();pickDate(sun);
+}
+document.getElementById('prevM').onclick=()=>{ S.calM--;if(S.calM<0){S.calM=11;S.calY--;}renderCal(); };
+document.getElementById('nextM').onclick=()=>{ S.calM++;if(S.calM>11){S.calM=0;S.calY++;}renderCal(); };
+document.getElementById('step1Next').onclick=()=>goStep(2);
+
+// ─── Group Select ─────────────────────────────────────────────────────
+function pickGroup(el){
+  document.querySelectorAll('.gc').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel'); S.group=el.dataset.g;
+  document.getElementById('step2Next').disabled=false;
+}
+document.getElementById('step2Next').onclick=()=>goStep(3);
+
+// ─── Load Members ─────────────────────────────────────────────────────
+async function loadMembers(){
+  const g=S.group,isV=g==='来宾';
+  document.getElementById('grpBadge').textContent=g==='来宾'?'👋 来宾':g;
+  document.getElementById('grpBadge').className='badge '+(GBADGE[g]||'b-lb');
+  document.getElementById('dateBadge').textContent=shortDt(S.date);
+  document.getElementById('nfPanel').style.display=isV?'block':'none';
+  document.getElementById('regPanel').style.display=isV?'none':'block';
+  document.getElementById('listLbl').textContent=isV?'Checked-In Visitors':'Members — tap to check in';
+  if(!isV) document.getElementById('searchIn').value='';
+  document.getElementById('syncSt').textContent='⏳ Loading…';
+  document.getElementById('nameList').innerHTML='<div class="empty"><div class="ei">⏳</div><p>Fetching from Google Sheets…</p></div>';
+  try{
+    const res  = await fetch(`${S.url}?action=getMembers&group=${encodeURIComponent(g)}`,{redirect:'follow'});
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    const today=shortDt(S.date);
+    S.allDates=data.dates||[];
+    S.members=data.members
+      .filter(m=>m.name&&m.name.trim())
+      .map((m,i)=>({
+        colA: (m.colA!==undefined&&m.colA!==''&&m.colA!==null)?m.colA:i+1,
+        name: String(m.name).trim(),
+        checkedIn: !!(m.attendance&&m.attendance[today]===1),
+        attendance: m.attendance||{}
+      }));
+    document.getElementById('syncSt').textContent='✅ Loaded';
+  }catch(e){
+    document.getElementById('syncSt').textContent='⚠️ Offline';
+    toast('Could not load from Sheet');
+    S.members=[];
+  }
+  renderList();
+}
+
+// ─── Render List ──────────────────────────────────────────────────────
+function renderList(){
+  const isV=S.group==='来宾';
+  const container=document.getElementById('nameList');
+  container.innerHTML='';
+  document.getElementById('noRes').style.display='none';
+  if(S.members.length===0){
+    container.innerHTML=isV
+      ?'<div class="empty"><div class="ei">👋</div><p>No visitors yet. Enter a name above.</p></div>'
+      :'<div class="empty"><div class="ei">👤</div><p>No members found. Add names in your Google Sheet.</p></div>';
+    updateStats();return;
+  }
+  const q=(document.getElementById('searchIn')?.value||'').trim().toLowerCase();
+  let list=[...S.members];
+  if(q) list=list.filter(m=>m.name.toLowerCase().includes(q));
+  list.sort((a,b)=>Number(a.colA)-Number(b.colA));
+  if(!list.length){ document.getElementById('noRes').style.display='block'; updateStats(); return; }
+  list.forEach(m=>{
+    const row=document.createElement('div');
+    row.className='name-row'+(m.checkedIn?' ck':'');
+    const init=m.name.charAt(0).toUpperCase();
+    // Escape name for inline onclick
+    const safeName=m.name.replace(/'/g,"\\'");
+    row.innerHTML=`
+      <div class="av">${init}</div>
+      <div class="cola">${m.colA}</div>
+      <div class="ni"><div class="nn">${m.name}</div></div>
+      <div class="row-right">
+        <button class="hist-btn" type="button" onclick="openProfile(event,'${safeName}')">📊</button>
+        <div class="chk-icon">${m.checkedIn?'✅':'⬜'}</div>
+      </div>`;
+    row.onclick=e=>{ if(!e.target.classList.contains('hist-btn')) toggle(m.name); };
+    container.appendChild(row);
+  });
+  updateStats();
+}
+
+function toggle(name){
+  const m=S.members.find(x=>x.name===name);if(!m)return;
+  m.checkedIn=!m.checkedIn;
+  toast(m.checkedIn?`✅ ${m.name} checked in`:`⬜ ${m.name} unmarked`);
+  renderList();
+}
+
+function updateStats(){
+  const p=S.members.filter(m=>m.checkedIn).length;
+  document.getElementById('stPres').textContent=p;
+  document.getElementById('stAbs').textContent=S.members.length-p;
+  document.getElementById('stTot').textContent=S.members.length;
+}
+
+// ─── Visitor Add ──────────────────────────────────────────────────────
+function nfAdd(){
+  const inp=document.getElementById('nfInput');
+  const name=inp.value.trim();
+  if(!name){toast('Enter a name first');return;}
+  const exists=S.members.find(m=>m.name.toLowerCase()===name.toLowerCase());
+  if(exists){exists.checkedIn=true;toast(`✅ ${exists.name} updated`);}
+  else{S.members.push({colA:S.members.length+1,name,checkedIn:true,attendance:{}});toast(`✅ ${name} added`);}
+  inp.value='';renderList();
+}
+document.getElementById('nfInput').addEventListener('keydown',e=>{ if(e.key==='Enter') nfAdd(); });
+
+// ─── Save to Sheet ────────────────────────────────────────────────────
+async function saveToSheet(){
+  const btn=document.getElementById('saveBtn');
+  btn.innerHTML='<span class="spin"></span>Saving…';btn.disabled=true;
+  document.getElementById('syncSt').textContent='⏳ Saving…';
+  const visitors=S.group==='来宾'?S.members.filter(m=>m.checkedIn).map(m=>m.name):[];
+  try{
+    const res=await fetch(S.url,{
+      method:'POST',redirect:'follow',
+      body:JSON.stringify({group:S.group,date:shortDt(S.date),attendance:S.members.map(m=>({name:m.name,checkedIn:m.checkedIn})),newMembers:visitors})
+    });
+    const data=await res.json();
+    if(data.error) throw new Error(data.error);
+    S.members.forEach(m=>{m.attendance[shortDt(S.date)]=m.checkedIn?1:0;});
+    if(!S.allDates.includes(shortDt(S.date))) S.allDates.push(shortDt(S.date));
+    document.getElementById('syncSt').textContent='✅ Saved';
+    toast('✅ Saved to Google Sheets!');
+  }catch(e){
+    document.getElementById('syncSt').textContent='❌ Failed';
+    toast('❌ Save failed — check connection');
+  }
+  btn.innerHTML='☁️ Save to Sheet';btn.disabled=false;
+}
+
+// ─── Profile Modal ────────────────────────────────────────────────────
+function openProfile(e,name){
+  e.stopPropagation();
+  const m=S.members.find(x=>x.name===name);if(!m)return;
+  const color=GCOLOR[S.group]||'#3B5BDB';
+  const att=m.attendance||{};
+  const dates=S.allDates.length>0?S.allDates:Object.keys(att);
+  const pres=dates.filter(d=>att[d]===1).length;
+  const tot=dates.length;
+  document.getElementById('mavatar').textContent=m.name.charAt(0).toUpperCase();
+  document.getElementById('mavatar').style.background=color;
+  document.getElementById('mname').textContent=m.name;
+  document.getElementById('mgroup').textContent=`${GICON[S.group]||''} ${S.group} · #${m.colA}`;
+  document.getElementById('mpres').textContent=pres;
+  document.getElementById('mtot').textContent=tot||'—';
+  document.getElementById('mpct').textContent=tot>0?Math.round(pres/tot*100)+'%':'—';
+  const byM={};
+  dates.forEach(d=>{
+    const p=d.split('-');if(p.length<3)return;
+    const MN=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const lbl=`${MN[parseInt(p[1])]||p[1]} 20${p[2]}`;
+    if(!byM[lbl])byM[lbl]=[];
+    byM[lbl].push({date:d,present:att[d]===1});
+  });
+  const hist=document.getElementById('mhist');
+  hist.innerHTML='';
+  if(!Object.keys(byM).length){
+    hist.innerHTML='<p style="font-size:.82rem;color:var(--sub)">No history yet.</p>';
+  } else {
+    Object.entries(byM).forEach(([month,recs])=>{
+      const b=document.createElement('div');b.className='att-month';
+      const mp=recs.filter(r=>r.present).length;
+      b.innerHTML=`<div class="att-mth-title">${month} — ${mp}/${recs.length}</div>
+        <div class="att-chips">${recs.map(r=>`<span class="chip ${r.present?'chip-p':'chip-a'}">${r.present?'✓':'✗'} ${r.date}</span>`).join('')}</div>`;
+      hist.appendChild(b);
+    });
+  }
+  document.getElementById('overlay').classList.add('open');
+}
+function closeOverlay(e){ if(e.target===document.getElementById('overlay'))closeModal(); }
+function closeModal(){ document.getElementById('overlay').classList.remove('open'); }
+
+// ─── Export Screen ────────────────────────────────────────────────────
+async function renderExport(){
+  document.getElementById('expDateLbl').textContent=shortDt(S.date);
+  const rows=document.getElementById('expRows');
+  rows.innerHTML='<div style="text-align:center;padding:18px;color:var(--sub);font-size:.85rem">⏳ Loading today\'s summary…</div>';
+  const today=shortDt(S.date);
+  const results=[];
+  let grandP=0,grandT=0;
+  await Promise.all(GROUPS.map(async g=>{
+    try{
+      const res=await fetch(`${S.url}?action=getMembers&group=${encodeURIComponent(g)}`,{redirect:'follow'});
+      const data=await res.json();
+      const mems=(data.members||[]).filter(m=>m.name&&m.name.trim());
+      const pres=mems.filter(m=>m.attendance&&m.attendance[today]===1).length;
+      const tot=mems.length;
+      grandP+=pres;grandT+=tot;
+      results.push({g,pres,tot,ok:true});
+    }catch(e){ results.push({g,pres:0,tot:0,ok:false}); }
+  }));
+  rows.innerHTML='';
+  GROUPS.forEach(g=>{
+    const r=results.find(x=>x.g===g)||{g,pres:0,tot:0,ok:false};
+    const isV=g==='来宾';
+    const pct=r.tot>0?` (${Math.round(r.pres/r.tot*100)}%)`:'';
+    const row=document.createElement('div');
+    row.className='exp-row';
+    row.style.background=GBGCOL[g]||'var(--bg)';
+    row.innerHTML=`<span style="font-size:1.1rem">${GICON[g]||'👥'}</span>
+      <span class="ename" style="color:${GCOLOR[g]||'var(--text)'}">${g}</span>
+      ${!r.ok?'<span style="color:var(--sub);font-size:.78rem">⚠️ Error</span>'
+        :isV?`<span class="epres">${r.pres}</span><span class="etot"> visitors</span>`
+        :`<span class="epres">${r.pres}</span><span class="etot"> / ${r.tot}</span><span class="epct">${pct}</span>`}`;
+    rows.appendChild(row);
+  });
+  const grand=document.createElement('div');
+  grand.className='exp-row exp-grand';
+  grand.innerHTML=`<span style="font-size:1.1rem">⛪</span><span class="ename">Grand Total</span><span class="epres">${grandP}</span><span class="etot"> / ${grandT}</span>`;
+  rows.appendChild(grand);
+}
+
+function openSheet(){ toast('Opening Google Sheets…'); window.open('https://sheets.google.com','_blank'); }
+
+// ─── Save as Excel — Summary + 6 group tabs ───────────────────────────
+async function saveExcel(){
+  const btn=document.getElementById('xlBtn');
+  btn.innerHTML='<span class="spin"></span>Building Excel…';btn.disabled=true;
+  const d=S.date;
+  const dd=String(d.getDate()).padStart(2,'0'),mm=String(d.getMonth()+1).padStart(2,'0'),yy=String(d.getFullYear()).slice(-2);
+  const dlabel=`${dd}-${mm}-${yy}`;
+  const wb=XLSX.utils.book_new();
+  const allData={};
+  await Promise.all(GROUPS.map(async g=>{
+    try{
+      const res=await fetch(`${S.url}?action=getMembers&group=${encodeURIComponent(g)}`,{redirect:'follow'});
+      const data=await res.json();
+      allData[g]={members:(data.members||[]).filter(m=>m.name&&m.name.trim()),dates:data.dates||[]};
+    }catch(e){ allData[g]={members:[],dates:[]}; }
+  }));
+  // Collect all unique dates
+  const dateSet=new Set();
+  GROUPS.forEach(g=>(allData[g].dates||[]).forEach(dt=>dateSet.add(dt)));
+  const allDates=[...dateSet].sort();
+  if(!allDates.length) allDates.push(dlabel);
+
+  // ── Summary tab ──────────────────────────────────────────────────
+  const sumRows=[
+    ['⛪ SUNDAY ATTENDANCE SUMMARY'],
+    [`Generated: ${dlabel}`],
+    [],
+    ['Category','Members',...allDates,'Grand Total']
+  ];
+  let grandTotals=new Array(allDates.length).fill(0),grandMem=0;
+  GROUPS.forEach(g=>{
+    const {members}=allData[g];
+    grandMem+=members.length;
+    const presents=allDates.map((dt,i)=>{
+      const cnt=members.filter(m=>m.attendance&&m.attendance[dt]===1).length;
+      grandTotals[i]+=cnt;return cnt;
+    });
+    sumRows.push([`${GICON[g]||''} ${g}`,members.length,...presents,presents.reduce((s,v)=>s+v,0)]);
+  });
+  sumRows.push([]);
+  sumRows.push(['⛪ GRAND TOTAL',grandMem,...grandTotals,grandTotals.reduce((s,v)=>s+v,0)]);
+  const wsSummary=XLSX.utils.aoa_to_sheet(sumRows);
+  wsSummary['!cols']=[{wch:18},{wch:10},...allDates.map(()=>({wch:11})),{wch:13}];
+  XLSX.utils.book_append_sheet(wb,wsSummary,'Summary');
+
+  // ── Group tabs ───────────────────────────────────────────────────
+  GROUPS.forEach(g=>{
+    const {members,dates}=allData[g];
+    const shDates=dates.length?dates:allDates;
+    const shRows=[['No.','Name',...shDates,'Total']];
+    members.forEach((m,i)=>{
+      const att=m.attendance||{};
+      const vals=shDates.map(dt=>att[dt]===1?1:0);
+      shRows.push([m.colA||i+1,m.name,...vals,vals.reduce((s,v)=>s+v,0)]);
+    });
+    const ws=XLSX.utils.aoa_to_sheet(shRows);
+    ws['!cols']=[{wch:6},{wch:20},...shDates.map(()=>({wch:10})),{wch:8}];
+    XLSX.utils.book_append_sheet(wb,ws,g==='来宾'?'来宾':g);
+  });
+
+  XLSX.writeFile(wb,`Attendance_${dlabel}.xlsx`);
+  toast(`📥 Saved Attendance_${dlabel}.xlsx`);
+  btn.innerHTML='📥 Save as Excel (.xlsx)';btn.disabled=false;
+}
+</script>
+</body>
+</html>
