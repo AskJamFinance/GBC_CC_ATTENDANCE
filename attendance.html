@@ -84,9 +84,12 @@ header p{font-size:.7rem;opacity:.78;margin-top:1px}
 
 /* ── GROUPS ── */
 .group-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.gc{border:2.5px solid var(--border);border-radius:var(--r);padding:18px 12px;text-align:center;cursor:pointer;transition:all .15s;background:var(--surface);min-height:82px;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.gc .gn{font-size:1.4rem;font-weight:800;line-height:1}
+.gc{border:2.5px solid var(--border);border-radius:var(--r);padding:14px 10px 14px 14px;cursor:pointer;transition:all .15s;background:var(--surface);min-height:82px;display:flex;align-items:center;gap:8px;position:relative}
+.gc-left{flex:1;text-align:left}
+.gc .gn{font-size:1.3rem;font-weight:800;line-height:1}
 .gc .gl{font-size:.72rem;color:var(--sub);margin-top:4px}
+.gc-view-btn{background:rgba(0,0,0,.06);border:none;border-radius:8px;padding:7px 9px;font-size:.8rem;cursor:pointer;flex-shrink:0;color:var(--sub);transition:all .15s;z-index:2}
+.gc-view-btn:active{background:var(--primary);color:#fff}
 .gc[data-g="信望爱"] .gn{color:var(--c-xw)} .gc[data-g="信望爱"]:active,.gc[data-g="信望爱"].sel{border-color:var(--c-xw);background:var(--c-xw-l)}
 .gc[data-g="加1"] .gn{color:var(--c-j1)}    .gc[data-g="加1"]:active,.gc[data-g="加1"].sel{border-color:var(--c-j1);background:var(--c-j1-l)}
 .gc[data-g="TOAST"] .gn{color:var(--c-to)}  .gc[data-g="TOAST"]:active,.gc[data-g="TOAST"].sel{border-color:var(--c-to);background:var(--c-to-l)}
@@ -159,6 +162,34 @@ header p{font-size:.7rem;opacity:.78;margin-top:1px}
 .exp-grand .epres{color:var(--primary)}
 .exp-divider{text-align:center;font-size:.7rem;color:var(--sub);margin:10px 0;display:flex;align-items:center;gap:8px}
 .exp-divider::before,.exp-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── GROUP MONTHLY MODAL ── */
+.gm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.gm-overlay.open{opacity:1;pointer-events:all}
+.gm-modal{background:var(--surface);border-radius:22px 22px 0 0;width:100%;max-width:580px;max-height:90vh;display:flex;flex-direction:column;transform:translateY(30px);transition:transform .26s}
+.gm-overlay.open .gm-modal{transform:translateY(0)}
+.gm-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 0;flex-shrink:0}
+.gm-hdr{padding:12px 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.gm-hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.gm-hdr-title{font-size:1rem;font-weight:800}
+.gm-close{background:var(--bg);border:none;border-radius:8px;padding:6px 12px;font-size:.8rem;font-weight:600;cursor:pointer;color:var(--text)}
+.gm-month-nav{display:flex;align-items:center;gap:12px;justify-content:center}
+.gm-month-btn{background:var(--primary-l);border:none;border-radius:8px;width:34px;height:34px;font-size:1.1rem;color:var(--primary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700}
+.gm-month-btn:active{background:var(--primary);color:#fff}
+.gm-month-label{font-size:.92rem;font-weight:700;min-width:110px;text-align:center}
+.gm-body{flex:1;overflow:auto;padding:0}
+.gm-table-wrap{overflow-x:auto;overflow-y:auto}
+.gm-table{border-collapse:collapse;font-size:.82rem;min-width:100%}
+.gm-table th{background:var(--primary);color:#fff;padding:8px 12px;text-align:center;font-weight:700;white-space:nowrap;position:sticky;top:0;z-index:2}
+.gm-table th.sticky-col{text-align:left;position:sticky;left:0;z-index:3;background:var(--primary)}
+.gm-table td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap}
+.gm-table td.sticky-col{text-align:left;position:sticky;left:0;background:var(--surface);font-weight:600;z-index:1;border-right:1px solid var(--border)}
+.gm-table tr:nth-child(even) td{background:#F8F9FF}
+.gm-table tr:nth-child(even) td.sticky-col{background:#F8F9FF}
+.gm-table tr.total-row td{font-weight:800;background:var(--green-l);color:var(--green)}
+.gm-table tr.total-row td.sticky-col{background:var(--green-l);color:var(--green)}
+.gm-empty{text-align:center;padding:32px 16px;color:var(--sub);font-size:.88rem}
+.gm-loading{text-align:center;padding:32px 16px;color:var(--sub);font-size:.88rem}
 
 /* ── PROFILE MODAL ── */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
@@ -261,12 +292,12 @@ header p{font-size:.7rem;opacity:.78;margin-top:1px}
     <div class="card">
       <div class="card-lbl">Choose Group</div>
       <div class="group-grid">
-        <div class="gc" data-g="信望爱" onclick="pickGroup(this)"><div class="gn">信望爱</div><div class="gl">Group 信望爱</div></div>
-        <div class="gc" data-g="加1"    onclick="pickGroup(this)"><div class="gn">加1</div><div class="gl">Group 加1</div></div>
-        <div class="gc" data-g="TOAST"  onclick="pickGroup(this)"><div class="gn">TOAST</div><div class="gl">Group TOAST</div></div>
-        <div class="gc" data-g="GLOW"   onclick="pickGroup(this)"><div class="gn">GLOW</div><div class="gl">Group GLOW</div></div>
-        <div class="gc" data-g="LIT"    onclick="pickGroup(this)"><div class="gn">LIT</div><div class="gl">Group LIT</div></div>
-        <div class="gc" data-g="来宾"   onclick="pickGroup(this)"><div class="gn">👋 来宾</div><div class="gl">Visitors</div></div>
+        <div class="gc" data-g="信望爱" onclick="pickGroup(this)"><div class="gc-left"><div class="gn">信望爱</div><div class="gl">Group 信望爱</div></div><button class="gc-view-btn" type="button" onclick="openGroupMonth(event,'信望爱')">📊</button></div>
+        <div class="gc" data-g="加1"    onclick="pickGroup(this)"><div class="gc-left"><div class="gn">加1</div><div class="gl">Group 加1</div></div><button class="gc-view-btn" type="button" onclick="openGroupMonth(event,'加1')">📊</button></div>
+        <div class="gc" data-g="TOAST"  onclick="pickGroup(this)"><div class="gc-left"><div class="gn">TOAST</div><div class="gl">Group TOAST</div></div><button class="gc-view-btn" type="button" onclick="openGroupMonth(event,'TOAST')">📊</button></div>
+        <div class="gc" data-g="GLOW"   onclick="pickGroup(this)"><div class="gc-left"><div class="gn">GLOW</div><div class="gl">Group GLOW</div></div><button class="gc-view-btn" type="button" onclick="openGroupMonth(event,'GLOW')">📊</button></div>
+        <div class="gc" data-g="LIT"    onclick="pickGroup(this)"><div class="gc-left"><div class="gn">LIT</div><div class="gl">Group LIT</div></div><button class="gc-view-btn" type="button" onclick="openGroupMonth(event,'LIT')">📊</button></div>
+        <div class="gc" data-g="来宾"   onclick="pickGroup(this)"><div class="gc-left"><div class="gn">👋 来宾</div><div class="gl">Visitors</div></div><button class="gc-view-btn" type="button" onclick="openGroupMonth(event,'来宾')">📊</button></div>
       </div>
     </div>
     <button class="btn" id="step2Next" type="button" disabled>Start Attendance →</button>
@@ -296,7 +327,7 @@ header p{font-size:.7rem;opacity:.78;margin-top:1px}
     <div id="regPanel" style="display:none">
       <div class="search-box">
         <span class="si">🔍</span>
-        <input type="text" id="searchIn" placeholder="Search by name…" oninput="renderList()" autocomplete="off"/>
+        <input type="text" id="searchIn" placeholder="Search by name or number…" oninput="renderList()" autocomplete="off"/>
       </div>
     </div>
     <div class="card">
@@ -328,6 +359,29 @@ header p{font-size:.7rem;opacity:.78;margin-top:1px}
       <div class="exp-divider">download options</div>
       <button class="btn" type="button" onclick="openSheet()">📋 Open Google Sheet</button>
       <button class="btn btn-green" id="xlBtn" type="button" onclick="saveExcel()" style="margin-top:8px">📥 Save as Excel (.xlsx)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ GROUP MONTHLY MODAL ═══ -->
+<div class="gm-overlay" id="gmOverlay" onclick="closeGmOverlay(event)">
+  <div class="gm-modal">
+    <div class="gm-handle"></div>
+    <div class="gm-hdr">
+      <div class="gm-hdr-top">
+        <div class="gm-hdr-title" id="gmTitle"></div>
+        <button class="gm-close" type="button" onclick="closeGmModal()">✕ Close</button>
+      </div>
+      <div class="gm-month-nav">
+        <button class="gm-month-btn" type="button" onclick="gmPrevMonth()">‹</button>
+        <div class="gm-month-label" id="gmMonthLabel"></div>
+        <button class="gm-month-btn" type="button" onclick="gmNextMonth()">›</button>
+      </div>
+    </div>
+    <div class="gm-body">
+      <div class="gm-table-wrap" id="gmTableWrap">
+        <div class="gm-loading">⏳ Loading…</div>
+      </div>
     </div>
   </div>
 </div>
@@ -526,7 +580,7 @@ function renderList(){
   }
   const q=(document.getElementById('searchIn')?.value||'').trim().toLowerCase();
   let list=[...S.members];
-  if(q) list=list.filter(m=>m.name.toLowerCase().includes(q));
+  if(q) list=list.filter(m=>m.name.toLowerCase().includes(q)||String(m.colA).includes(q));
   list.sort((a,b)=>Number(a.colA)-Number(b.colA));
   if(!list.length){ document.getElementById('noRes').style.display='block'; updateStats(); return; }
   list.forEach(m=>{
@@ -747,6 +801,93 @@ async function saveExcel(){
   toast(`📥 Saved Attendance_${dlabel}.xlsx`);
   btn.innerHTML='📥 Save as Excel (.xlsx)';btn.disabled=false;
 }
+
+// ─── Group Monthly Attendance Modal ──────────────────────────────────
+const GM = { group:null, year:0, month:0, members:[], dates:[] };
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+async function openGroupMonth(e, group){
+  e.stopPropagation();
+  GM.group = group;
+  const now = new Date();
+  GM.year  = now.getFullYear();
+  GM.month = now.getMonth();
+  document.getElementById('gmTitle').textContent = `${GICON[group]||''} ${group} — Monthly Attendance`;
+  document.getElementById('gmOverlay').classList.add('open');
+  await loadGmData();
+}
+
+async function loadGmData(){
+  document.getElementById('gmMonthLabel').textContent = `${MONTH_NAMES[GM.month]} ${GM.year}`;
+  document.getElementById('gmTableWrap').innerHTML = '<div class="gm-loading">⏳ Loading…</div>';
+  try{
+    const res  = await fetch(`${S.url}?action=getMembers&group=${encodeURIComponent(GM.group)}`,{redirect:'follow'});
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    GM.members = (data.members||[]).filter(m=>m.name&&m.name.trim());
+    GM.dates   = data.dates||[];
+    renderGmTable();
+  }catch(e){
+    document.getElementById('gmTableWrap').innerHTML = `<div class="gm-empty">❌ Could not load data.<br>${e.message}</div>`;
+  }
+}
+
+function renderGmTable(){
+  // Filter dates for current month/year
+  const mm = String(GM.month+1).padStart(2,'0');
+  const yy = String(GM.year).slice(-2);
+  const monthDates = GM.dates.filter(d=>{
+    const parts = d.split('-');
+    return parts.length===3 && parts[1]===mm && parts[2]===yy;
+  });
+
+  if(!monthDates.length){
+    document.getElementById('gmTableWrap').innerHTML =
+      `<div class="gm-empty">📭 No attendance recorded for ${MONTH_NAMES[GM.month]} ${GM.year}</div>`;
+    return;
+  }
+
+  // Build table
+  let html = `<table class="gm-table"><thead><tr>
+    <th class="sticky-col">Name</th>
+    ${monthDates.map(d=>`<th>${d}</th>`).join('')}
+  </tr></thead><tbody>`;
+
+  const totals = new Array(monthDates.length).fill(0);
+
+  GM.members.forEach(m=>{
+    const att = m.attendance||{};
+    html += `<tr><td class="sticky-col">${m.colA||''}&nbsp;${m.name}</td>`;
+    monthDates.forEach((d,i)=>{
+      const present = att[d]===1;
+      if(present) totals[i]++;
+      html += `<td>${present?'✅':'❌'}</td>`;
+    });
+    html += '</tr>';
+  });
+
+  // Total row
+  html += `<tr class="total-row"><td class="sticky-col">Total Present</td>`;
+  totals.forEach(t=>{ html += `<td>${t}</td>`; });
+  html += '</tr></tbody></table>';
+
+  document.getElementById('gmTableWrap').innerHTML = html;
+}
+
+function gmPrevMonth(){
+  GM.month--;
+  if(GM.month<0){GM.month=11;GM.year--;}
+  document.getElementById('gmMonthLabel').textContent=`${MONTH_NAMES[GM.month]} ${GM.year}`;
+  renderGmTable();
+}
+function gmNextMonth(){
+  GM.month++;
+  if(GM.month>11){GM.month=0;GM.year++;}
+  document.getElementById('gmMonthLabel').textContent=`${MONTH_NAMES[GM.month]} ${GM.year}`;
+  renderGmTable();
+}
+function closeGmOverlay(e){ if(e.target===document.getElementById('gmOverlay')) closeGmModal(); }
+function closeGmModal(){ document.getElementById('gmOverlay').classList.remove('open'); }
 </script>
 </body>
 </html>
